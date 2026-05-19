@@ -1,0 +1,190 @@
+type http_request_result = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type http_header = 
+ record {
+   name: text;
+   value: text;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UserId = principal;
+type TransformationOutput = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type TransformationInput = 
+ record {
+   context: blob;
+   response: http_request_result;
+ };
+type Timestamp = int;
+type StripeSessionStatus = 
+ variant {
+   completed: record {
+                response: text;
+                userPrincipal: opt text;
+              };
+   failed: record {error: text;};
+ };
+type StripeConfiguration = 
+ record {
+   allowedCountries: vec text;
+   secretKey: text;
+ };
+type ShoppingItem = 
+ record {
+   currency: text;
+   priceInCents: nat;
+   productDescription: text;
+   productName: text;
+   quantity: nat;
+ };
+type ProductInput = 
+ record {
+   badge: opt text;
+   brand: text;
+   category: text;
+   description: text;
+   id: text;
+   imagePaths: vec text;
+   isFeatured: bool;
+   isLimited: bool;
+   name: text;
+   priceInCents: nat;
+   sizes: vec text;
+   stock: nat;
+ };
+type ProductId = text;
+type Product = 
+ record {
+   badge: opt text;
+   brand: text;
+   category: text;
+   description: text;
+   id: text;
+   imagePaths: vec text;
+   isFeatured: bool;
+   isLimited: bool;
+   name: text;
+   priceInCents: nat;
+   sizes: vec text;
+   stock: nat;
+ };
+type PaymentMethod = 
+ variant {
+   cod;
+   phonepe;
+   stripe;
+ };
+type OrderStatus = 
+ variant {
+   cancelled;
+   delivered;
+   paid;
+   pending;
+   shipped;
+ };
+type OrderItem = 
+ record {
+   priceInCents: nat;
+   productId: ProductId;
+   productName: text;
+   quantity: nat;
+   size: opt text;
+ };
+type OrderId = nat;
+type Order = 
+ record {
+   createdAt: Timestamp;
+   customerName: opt text;
+   customerPhone: opt text;
+   displayOrderId: opt text;
+   id: OrderId;
+   items: vec OrderItem;
+   orderNotes: opt text;
+   paymentMethod: opt PaymentMethod;
+   pincode: opt text;
+   shippingAddress: opt text;
+   status: OrderStatus;
+   stripeSessionId: opt text;
+   totalInCents: nat;
+   updatedAt: Timestamp;
+   userId: UserId;
+ };
+type LogEntry = 
+ record {
+   channel: text;
+   message: text;
+   success: bool;
+   timestamp: int;
+ };
+type CartItemInput = 
+ record {
+   priceInCents: nat;
+   productId: text;
+   productName: text;
+   quantity: nat;
+   size: text;
+ };
+service : {
+  _initializeAccessControl: () -> ();
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  confirmPayment: (sessionId: text) -> (bool);
+  createCheckoutSession: (items: vec ShoppingItem, successUrl: text,
+   cancelUrl: text) -> (text);
+  deleteProduct: (id: text) -> ();
+  getCallerUserRole: () -> (UserRole) query;
+  getNotificationLog: () -> (vec LogEntry) query;
+  getOrder: (id: OrderId) -> (opt Order) query;
+  getProduct: (id: text) -> (opt Product) query;
+  getStripeSessionStatus: (sessionId: text) -> (StripeSessionStatus);
+  isCallerAdmin: () -> (bool) query;
+  isStripeConfigured: () -> (bool) query;
+  listAllOrders: () -> (vec Order) query;
+  listFeaturedProducts: () -> (vec Product) query;
+  listMyOrders: () -> (vec Order) query;
+  listProducts: () -> (vec Product) query;
+  listProductsByBrand: (brand: text) -> (vec Product) query;
+  listProductsByCategory: (category: text) -> (vec Product) query;
+  placeFullOrder: (payload:
+   record {
+     cartItems: vec CartItemInput;
+     customerName: text;
+     customerPhone: text;
+     orderNotes: text;
+     paymentMethod: PaymentMethod;
+     pincode: text;
+     shippingAddress: text;
+     totalInCents: nat;
+   }) ->
+   (variant {
+      err: text;
+      ok: record {
+            displayOrderId: text;
+            orderId: nat;
+          };
+    });
+  placeOrder: (items: vec OrderItem, totalInCents: nat) -> (Order);
+  setCallMeBotApiKey: (key: text) -> ();
+  setResendApiKey: (key: text) -> ();
+  setStripeConfiguration: (config: StripeConfiguration) -> ();
+  submitOrderRequest: (customerName: text, phone: text, productName: 
+   text, shoeSize: text, quantity: nat, address: text, note: text) ->
+   (variant {
+      err: text;
+      ok: OrderId;
+    });
+  transform: (input: TransformationInput) -> (TransformationOutput) query;
+  updateOrderStatus: (id: OrderId, status: OrderStatus) -> (bool);
+  upsertProduct: (product: ProductInput) -> ();
+}
